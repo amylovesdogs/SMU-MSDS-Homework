@@ -17,7 +17,9 @@ by_maj_cat <- group_by(df, major_category)
 major_count <- summarise(by_maj_cat, count=n())
 ```
 # Package 538, Dataset: college_recent_grads
-### a related article can be found at https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/
+### Files can be found on github at: (https://github.com/amylovesdogs/SMU-MSDS-Homework)
+
+### A related article can be found at https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/
 ### Dimensions are `r dimens`
 ### Column names are: `r colNames`
 ### The number of columns are: `r cols`
