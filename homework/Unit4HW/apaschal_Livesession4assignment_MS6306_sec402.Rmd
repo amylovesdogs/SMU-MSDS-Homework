@@ -21,7 +21,6 @@ major_count <- summarise(by_maj_cat, count=n())
 ### Dimensions are `r dimens`
 ### Column names are: `r colNames`
 ### The number of columns are: `r cols`
-### Categories of major:
 
 ```{r chunk2, echo=TRUE}
 par(las=2, mar=c(4,10,4,4))
