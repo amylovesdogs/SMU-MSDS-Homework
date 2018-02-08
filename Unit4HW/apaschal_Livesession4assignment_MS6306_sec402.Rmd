@@ -1,0 +1,38 @@
+---
+title: "Homework 4 MS6306 sec402"
+author: "Amy Paschal"
+date: "2/7/2018"
+output: html_document
+---
+
+```{r chunk1, echo=TRUE}
+library("fivethirtyeight")
+library(dplyr)
+df <- college_recent_grads
+colNames <- names(df)
+dimens <- dim(df)
+cols <- ncol(df)
+rows <- nrow(df)
+by_maj_cat <- group_by(df, major_category)
+major_count <- summarise(by_maj_cat, count=n())
+```
+# Package 538, Dataset: college_recent_grads
+### a related article can be found at https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/
+### Dimensions are `r dimens`
+### Column names are: `r colNames`
+### The number of columns are: `r cols`
+### Categories of major:
+
+```{r chunk2, echo=TRUE}
+par(las=2, mar=c(4,10,4,4))
+barplot(major_count$count, names.arg=major_count$major_category, ylab = "Categories", xlab = "Number of Majors in Category", main="Number of Majors by Category for Recent College Grads", col=4, horiz = TRUE, cex.name=0.5)
+write.table(df,"fivethrityeight.csv",sep=",",col.names=FALSE,row.names=FALSE)
+```
+
+
+
+
+
+
+
+
