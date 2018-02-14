@@ -1,0 +1,90 @@
+---
+title: "Codebook for Baby Name Selection"
+author: "Amy Paschal"
+date: "2/14/2018"
+output: html_document
+---
+
+
+# Repository
+#### https://github.com/amylovesdogs/SMU-MSDS-Homework/tree/master/homework/Unit5HW
+
+# Raw Data
+#### The raw data for this project consists of two text files called yob2015.txt and yob2016.txt. These files were obtained from the client.
+
+## yob2015.txt
+* Contains popular baby names from 2015.
+* Is a comma separated, headerless text file.
+* Each row contains:
+
+Data | Format 
+--- | --- | ---
+First name | text
+Gender typically associated with name | text: F or M
+Number of babies given that name in 2015 | integer
+
+## yob2016.txt
+* Contains popular baby names from 2016.
+* Is a semi-colon separated, headerless text file.
+* Each row contains:
+
+Data | Format 
+--- | --- | ---
+First name | text
+Gender typically associated with name | text: F or M
+Number of babies given that name in 2015 | integer
+
+# Objects
+#### The objects created by this project are as follows:
+
+## y2015
+* Contains popular baby names from 2015.
+* Is a data frame with the following columns:
+
+Column Name | Class | Meaning
+--- | --- | ---
+Name | charactor | First name
+Gender | factor: F or M | Gender typically associated with name
+Count | integer | Number of babies given that name in 2015
+
+## y2016
+* Contains popular baby names from 2016.
+* Is a data frame with the following columns:
+
+Column Name | Class | Meaning
+--- | --- | ---
+Name | charactor | First name
+Gender | factor: F or M | Gender typically associated with name
+Count | integer | Number of babies given that name in 2016
+
+## final
+* Contains baby names popular in both 2016 and 2015.
+* Is a data frame sorted by Total containing the following columns:
+* Each row contains:
+
+Column Name | Class | Meaning
+--- | --- | ---
+Name | charactor | First name
+Gender | factor: F or M | Gender typically associated with name
+Count.2015 | integer | Number of babies given that name in 2015
+Count.2016 | integer | Number of babies given that name in 2016
+Total | integer | Number of babies given that name in 2016 and 2015 combined
+
+# Output Files
+## Output files created by this project are as follows:
+### apaschal_Livesession5assignment_MS6306_sec402.html
+#### HTML file created by running makefile.R
+
+### Codebook.html
+#### HTML file created by running makefile.R
+
+### itsagirl.csv
+#### Comma separated file containing a header and rows with the following columns:
+
+Name | charactor | First name
+Total | integer | Number of babies given that name in 2016 and 2015 combined
+
+# Instructions
+1. Load Makefile.R into R Studio
+2. Click on the Source button
+3. View output files of interest in your favorite text file reader
