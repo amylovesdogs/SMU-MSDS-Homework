@@ -11,9 +11,9 @@
 ### itsagirl.csv
 #### Comma separated file containing a header and rows with the following columns:
 
-Name | charactor | First name
 | ------------- |:-------------:| -----:|
-Total | integer | Number of babies given that name in 2016 and 2015 combined
+Name |charactor |First name
+Total |integer |Number of babies given that name in 2016 and 2015 combined
 
 # Instructions
 1. Load Makefile.R into R Studio
