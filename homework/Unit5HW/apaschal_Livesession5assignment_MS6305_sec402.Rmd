@@ -1,0 +1,51 @@
+---
+title: "Choosing a Baby Name"
+author: "Amy Paschal"
+date: "2/14/2018"
+output: html_document
+---
+
+### Congratulations on your impending arrival!
+### Let's choose some baby names!
+### Of course you want to be on point so let's see what's trending.
+```{r chunk1, echo=TRUE}
+classProfile <- c("character", "factor", "integer")
+babyColNames <-  c("Name", "Gender", "Count")
+df <- read.table("yob2016.txt", header=FALSE, sep=";", colClasses=classProfile)
+names(df) <- babyColNames
+summary(df)
+str(df)
+typo <- grep("*yyy",df$Name)
+```
+### Oops! Found a typo: `r df[typo,c("Name")]`
+### Removing . . . 
+```{r chunk2, echo=TRUE}
+y2016 <- df[-typo,]
+y2015 <- read.table("yob2015.txt", header=FALSE, sep=",", colClasses=classProfile)
+names(y2015) <- babyColNames
+```
+### Well, this is interesing.
+### Lot's of Z names given to exactly 5 children in 2015.
+```{r chunk3, echo=TRUE}
+tail(y2015,10)
+final <- merge(y2015, y2016, by=c("Name","Gender"), all=FALSE)
+names(final)[names(final) == "Count.x"] <- "Count.2015"
+names(final)[names(final) == "Count.y"] <- "Count.2016"
+```
+### There certainly were a lot of popular names in 2015 and 2016.
+### You have `r nrow(final)` to choose from.
+### Here are the 10 most popular:
+```{r chunk4, echo=TRUE}
+final$Total <- final$Count.2015 + final$Count.2016
+final <- final[order(final$Total, decreasing = TRUE),]
+head(final, 10)
+```
+### Congratulations!!! It's a girl.
+### Here are the 10 most popular girl's names.
+### I am writing them to "itsagirl.csv" for your convenience.
+```{r chunk5, echo=TRUE}
+print(final[final$Gender == "F",][1:10, c("Name","Total")],  row.names = FALSE)
+write.table(final[final$Gender == "F",][1:10, c("Name", "Total")], "itsagirl.csv", quote=TRUE, sep=",", col.names=TRUE, row.names=FALSE)
+```
+### Thank you! And enjoy your beautiful baby girl.
+
