@@ -12,7 +12,7 @@
 #### Comma separated file containing a header and rows with the following columns:
 
 Name | charactor | First name
-
+| ------------- |:-------------:| -----:|
 Total | integer | Number of babies given that name in 2016 and 2015 combined
 
 # Instructions
