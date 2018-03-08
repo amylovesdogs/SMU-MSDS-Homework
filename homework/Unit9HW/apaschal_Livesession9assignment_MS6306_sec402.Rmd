@@ -1,0 +1,142 @@
+---
+title: "Preparing Data"
+author: "Amy Paschal"
+date: "3/3/2018"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+### Harry Potter and the Dealthy Hallows: Part 2
+#### Full Cast
+```{r HPDH2, echo=TRUE}
+library(rvest)
+library(xml2)
+library(stringr)
+library(knitr)
+library(kableExtra)
+
+# store words that can be the first word of a two-word last name
+# words are defined as strings made up of non-blank characters
+prefix_bank <- c("de","Van")
+
+# splitName
+# input: a vector of strings, each string is a word in a persons name
+# output: a two dimentional vector, 
+#    the first element is the a string of the first and middle names (i.e. all words not part of the last name)
+#    the second element is a string of all words comprising the last name
+# Properly hands multiple last names like 'de Juan' and 'Van Heusen'
+splitName <- function(x) {
+  num_names <- length(x)
+  last_name <- x[num_names]
+  leave_off <- c(num_names)
+  # check for two-word last name
+  if (num_names > 1 & x[num_names-1] %in% prefix_bank) {
+      last_name <- paste(x[num_names-1], last_name, sep = " ")
+      leave_off <- append(leave_off, num_names-1)
+  }
+  cbind(paste(x[-leave_off], collapse = " "), last_name)
+}
+
+# read in HMTL from the IMDB web site
+IMDB_hp <- read_html("http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1")
+actors_html <- html_nodes(IMDB_hp, xpath='//*[contains(concat( " ", @class, " " ), concat( " ", "itemprop", " " ))]//*[contains(concat( " ", @class, " " ), concat( " ", "itemprop", " " ))]')
+characters_html <- html_nodes(IMDB_hp, xpath='//*[(@id = "fullcredits_content")]//div')
+
+#Convert the actors and characters data to text
+actor_data <- html_text(actors_html)
+character_data <- html_text(characters_html)
+
+# convert the actor data to a dataframe with FirstName and Surname columns
+cast <- data.frame(t(sapply(strsplit(actor_data, " "), splitName)), stringsAsFactors = FALSE)
+names(cast) <- c("FirstName","Surname")
+         
+# clean the character data
+# remove new lines, extra white space, and anything in parentheses
+character_data <- str_replace_all(html_text(characters_html), "[\r\n]" , "")
+character_data <- str_replace_all(character_data, "\\s+" , " ")
+character_data <- str_replace_all(character_data, "\\([^\\)]+\\)" , "")
+
+# add the character information to the cast dataframe
+cast$Character <- character_data
+
+#display in a table
+kable(cast, "markdown", row.names=FALSE, align="l", padding=2)
+
+```
+#### Top Cast
+```{r HPDH2-2, echo=TRUE}
+kable(head(cast,10), "markdown", row.names=FALSE, align="l", padding=2)
+```
+### Shooting Statistics
+#### San Antonio Spurs
+
+```{r BBALL, echo=TRUE}
+library(xml2)
+library(ggplot2)
+
+# read in HMTL from the IMDB web site
+ESPN_spurs <- read_html("http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs")
+
+# get the shooting stats table
+stats_head_html <- xml_find_all(ESPN_spurs, xpath='//*[contains(concat( " ", @class, " " ), concat( " ", "stathead", " " ))]')
+shooting_head <- stats_head_html[2]
+
+# break the table in to header and rows, and get their count
+rows_html <- xml_siblings(shooting_head) 
+headers_html <- xml_children(rows_html[1])
+headers <- sapply(headers_html, function(x) html_text(x))
+num_stat_cols <- length(headers)
+stat_rows <- rows_html[-c(1,length(rows_html))]
+num_stat_rows <- length(stat_rows)
+
+# make header cols into acceptable variable names
+headers <- str_replace_all(headers, "%" , "P")
+headers <- str_replace_all(headers, "3" , "Three")
+headers <- str_replace_all(headers, "2" , "Two")
+
+# strip the statistics rows of html
+stats_html <- sapply(stat_rows, function(x) xml_children(x))
+stat_list <- sapply(stats_html, function(x) html_text(x))
+
+# format information into a data frame
+stats_matrix <- matrix(stat_list, nrow = num_stat_rows, ncol = num_stat_cols, byrow = TRUE)
+stats_df <- data.frame(stats_matrix, row.names = NULL, stringsAsFactors = FALSE)
+names(stats_df) <- headers
+
+# split the player and position into two columns
+stats_df$POS <- str_replace_all(sapply(strsplit(stats_df$PLAYER, ","), "[[", 2),"\\s+","")
+stats_df$PLAYER <- sapply(strsplit(stats_df$PLAYER, ","), "[[", 1)
+#reorder columns
+stats_df <- stats_df[c(headers[1],"POS",headers[-1])]
+
+# convert numeric types to numeric
+stats_df$FGM <- as.numeric(stats_df$FGM)
+stats_df$FGA <- as.numeric(stats_df$FGA)
+stats_df$FGP <- as.numeric(stats_df$FGP)
+stats_df$ThreePM <- as.numeric(stats_df$ThreePM)
+stats_df$ThreePA <- as.numeric(stats_df$ThreePA)
+stats_df$ThreePP <- as.numeric(stats_df$ThreePP)
+stats_df$FTM <- as.numeric(stats_df$FTM)
+stats_df$FTA <- as.numeric(stats_df$FTA)
+stats_df$FTP <- as.numeric(stats_df$FTP)
+stats_df$TwoPM <- as.numeric(stats_df$TwoPM)
+stats_df$TwoPA <- as.numeric(stats_df$TwoPA)
+stats_df$TwoPP <- as.numeric(stats_df$TwoPP)
+stats_df$PPS <- as.numeric(stats_df$PPS)
+stats_df$AFGP <- as.numeric(stats_df$AFGP)
+
+
+str(stats_df)
+
+#display in a table
+kable(stats_df, "markdown", row.names=FALSE, align="l", padding=2)
+
+# sort by FGP descending in a way that makes ggplot happy
+stats_df$PLAYER <- factor(stats_df$PLAYER, levels = stats_df$PLAYER[order(-stats_df$FGP)])
+
+ggplot(data=stats_df, aes(x=PLAYER, y=FGP, fill=POS)) + geom_bar(stat="identity", width=.7) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(title="Field Goal Percentage by Player", x ="Players", y = "Field Goal Percentage") + scale_fill_manual("Positions", values = c("PF" = "steelblue2", "SF" = "darkgoldenrod2", "C" = "coral1", "PG" ="darkseagreen", "SG" ="burlywood2"))
+```
+
+```
