@@ -1,0 +1,162 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+lib---
+title: "VA Mental Health Hospital Research"
+author: "Amy Paschal"
+date: "3/20/2018"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+
+### VA Mental Health Clinic Research
+
+###### Data can be found at https://github.com/amylovesdogs/SMU-MSDS-Homework/tree/master/homework/Unit10HW
+
+```{r LOAD, echo=TRUE}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(RColorBrewer)
+library(data.table)
+
+# Load the National Mental Health Services Survey (N-MHSS)
+load("/Users/amypaschal/Documents/SMU/Term 1/Doing Data Science/Unit 10 /N-MHSS-2015-DS0001-bndl-data-r/N-MHSS-2015-DS0001-data/N-MHSS-2015-DS0001-data-r.rda")
+
+# do a bit of data cleaning including removing white space and doing data conversions
+# white space must be removed from the data in the LST column, otherwise matching state names
+# will not be found equal in any comparisons and merging based on state abbreviations
+# will fail
+mh2015_puf$LST <- trimws(as.character(mh2015_puf$LST))
+mh2015_puf$FACILITYTYPE <- as.numeric(mh2015_puf$FACILITYTYPE)
+
+# pull all states and territories listed in the survey
+states <- sort(unique(mh2015_puf$LST))
+
+#  now get only mainland states and DC
+outlying <- c('AK', 'AS', 'GU', 'HI', 'PR', 'VI')
+mainland <- setdiff(states, outlying)
+```
+#### States Surveyed
+###### `r states`
+
+#### Number of VA Mental Health Facilities by State
+```{r NUMBER, echo=TRUE}
+# get rows for all facilities on the mainland
+mh2015_mainland <- mh2015_puf[mh2015_puf$LST %in% mainland,]
+
+# get rows for the VA hospitals, and only pull the interesting columns
+mh2015_mainland_va <- mh2015_mainland[mh2015_mainland$FACILITYTYPE == 6, c("CASEID","LST","FACILITYTYPE")]
+
+# set some more user-friendly column titles
+names(mh2015_mainland_va) <- c("ID","State","Type")
+
+# create a data frame with the number of facilities in each state and display
+facility_count <- aggregate(c(count = ID) ~ State, data = mh2015_mainland_va, FUN = function(x){NROW(x)})
+names(facility_count) <- c('State','Count')
+
+# sort by Count descending in a way that makes ggplot happy
+facility_count$State <- factor(facility_count$State, levels = facility_count$State[order(-facility_count$Count)])
+
+# plot
+ggplot(facility_count, aes(x=State, y=Count, fill=State)) +
+geom_bar(stat="identity", width=.7) + theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5), legend.position = "none") + labs(title="Number of VA Mental Health Factilties by State", x ="State", y = "Number of Facilities")
+```
+
+#### Number of VA Mental Health Facilities Per 1000 Square Miles by State
+```{r SIZE, echo=TRUE}
+
+# read in the state size data and do data conversions
+state_size <- read.csv("statesize.csv", header = TRUE, colClasses = c('character', 'numeric', 'character', 'character'))
+
+# filter for mainland facilities, pulling only the columns of interest
+columns <- c("Abbrev","StateName","SqMiles","Region")
+states_mainland <- state_size[state_size$Abbrev %in% mainland, columns]
+
+# rename columns. One way to do the merge is to have the state abbreviaion column name in the state 
+# information dataframe match that of the same column in the facilities information
+names(states_mainland) <- c("State","StateName", "SqMiles","Region")
+
+facilities <- merge(facility_count, states_mainland, all = TRUE)
+
+# since the merge included all rows, we have rows for DC, which was not in the state size file
+# and ND which has no facilities.
+# clean up that data, including adding the square milage of DC
+facilities$Count[is.na(facilities$Count)] <- 0
+facilities$StateName[facilities$State == "DC"] <- "District of Columbia"
+facilities$Region[facilities$State == "DC"] <- "South"
+facilities$SqMiles[facilities$State == "DC"] <- 68.34
+
+# add a facilities per 1000 square miles variable
+facilities$PerThousandSqMiles <- facilities$Count / (facilities$SqMiles / 1000)
+
+# As it turns out DC thows the scale off, so remove DC to keep the scale reasonable
+facilities_noDC <- facilities[(facilities$State != "DC"),]
+
+# sort by PerThousandSqMiles descending in a way that makes ggplot happy
+facilities_noDC$State <- factor(facilities_noDC$State, levels = facilities_noDC$State[order(-facilities_noDC$PerThousandSqMiles)])
+
+# plot
+ggplot(facilities_noDC, aes(x=State, y=PerThousandSqMiles, fill=Region)) +
+geom_bar(stat="identity", width=.7) + theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5), legend.position = "top") + labs(title="Number of VA Mental Health Factilties Per 1000 Square Miles by State", x ="State", y = "Facilities Per 1000 Square Miles") + scale_fill_brewer(palette="Dark2")
+
+# store the information for DC
+dc <- facilities$PerThousandSqMiles[facilities$State == "DC"]
+options(digits = 1)
+```
+
+###### Note: This graph does not include DC due to scaling issues. DC has `r dc` facilities per 1000 square miles.
+
+#### Patterns
+###### The graph shows that the region with the highest number of VA medical centers per 1000 square miles is the Northest and that with the lowest is the West.
+###### An exception here is ND with no facilities at all.
+###### Given that the Northeast is the most densely populated region and the West, the least, I would suggest examining centers per unit of population as well.
+
+#### Population
+##### Full State Population (2017 US Census Bureau Data)
+
+```{r POPULATION, echo=TRUE}
+# 2017 state population gathered from the U.S. census bureau
+state_pop <- read.csv("census.csv", header = TRUE, colClasses = c('character', 'numeric'))
+
+# merge population into facilities
+facilities <- merge(facilities, state_pop)
+facilities$PerMillionPop <- facilities$Count / (facilities$Population / 1000000)
+
+# sort by PerMillionPop descending in a way that makes ggplot happy
+facilities$State <- factor(facilities$State, levels = facilities$State[order(-facilities$PerMillionPop)])
+
+# plot
+ggplot(facilities, aes(x=State, y=PerMillionPop, fill=Region)) +
+geom_bar(stat="identity", width=.7) + theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5), legend.position = "top") + labs(title="Number of VA Mental Health Factilties Per Million of Population", x ="State", y = "Number of Facilities Per Million")
+
+```
+
+#### Population of Veterans (2016 US Census Bureau Data)
+
+```{r VETERANS, echo=TRUE}
+# 2016 veteran population by state from the US census bureau
+state_vets <- read.csv("veterans.csv", header = TRUE, colClasses = c('character', 'numeric'))
+
+# merge population into facilities
+facilities <- merge(facilities, state_vets)
+facilities$PerHundredThousandVets <- facilities$Count / (facilities$VeteranPop / 100000)
+
+# sort by PerMillionPop descending in a way that makes ggplot happy
+facilities$State <- factor(facilities$State, levels = facilities$State[order(-facilities$PerHundredThousandVets)])
+
+# plot
+ggplot(facilities, aes(x=State, y=PerHundredThousandVets, fill=Region)) +
+geom_bar(stat="identity", width=.7) + theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5), legend.position = "top") + labs(title="Number of VA Mental Health Factilties Per Hundred Thousand Veterans", x ="State", y = "Number of Facilities Per Hundred Thousand Vets")
+
+```
+
+#### Patterns
+###### According to this graph, the Northeast still has a strong showing but not nearly to the degree the square mileage analysis would indicate.
+###### This graph shows the clearest need overall is in the south. ND still has zero facilities but the Dakotas taken together fall about mid-range.
+###### Both population and square mileage should be taken into account because travel can be prohibitive as well as long lines.
