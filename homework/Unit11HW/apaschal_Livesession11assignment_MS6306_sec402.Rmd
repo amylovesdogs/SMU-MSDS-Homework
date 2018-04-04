@@ -1,0 +1,89 @@
+---
+title: "Time Series Data"
+author: "Amy Paschal"
+date: "4/4/2018"
+output:
+  html_document:
+    keep_md: yes
+  'html_document: keep_md: yes': default
+  pdf_document: default
+---
+
+###### Data can be found at https://github.com/amylovesdogs/SMU-MSDS-Homework/tree/master/homework/Unit11HW
+
+#### European Stock Exchange Prices
+```{r STOCK, echo=TRUE}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(dygraphs)
+library(xts)
+library(fpp2)
+
+# Question 1
+# plot the DAX daily closing price from 1991 to present.
+plot(EuStockMarkets[,"DAX"], main="Daily Closing Prices: European Stock Market (German DAX)", xlab="Days (1990-Pressent)", ylab="Closing Prices (Euros)", col="blue") 
+abline(v = 1997, col="red")
+
+# births <- ts(births, frequency = 12, start = c(1946, 1))
+decomposed_stock <- decompose(EuStockMarkets[,"DAX"], type = "multiplicative")
+plot(decomposed_stock, col = "blue")
+abline(v = 1997, col="red")
+```
+
+#### Maximum Annual Temperatures (Celsius) in Melbourne, Australia
+
+```{r TEMP, echo=TRUE}
+# Question 2
+maxtemp_since1990 <- window(maxtemp,start=1990)
+
+# forecast with SES
+ses_fit <- ses(maxtemp_since1990,alpha=0.89,initial="optimal",h=5)
+plot(ses_fit,PI=FALSE,ylab="Max Annual Temp(C), Melbourne",xlab="Year",main="Forecasting using SES",fcol="white",type="o")
+lines(fitted(ses_fit),col="blue",type="o")
+lines(ses_fit$mean,col="red",type="o")
+legend("topleft", lty=1, col=c(1,"blue","red"), c("data", "fitted (alpha = 0.89)","forecast"),pch=1)
+ses_aicc <- ses_fit$model$aicc
+
+#forecast with Holt's linear trend
+holt_mult_damped <- holt(maxtemp_since1990, alpha=0.8, beta=0.2, initial="optimal", exponential=TRUE, h=5, damped=TRUE)
+plot(holt_mult_damped,PI=FALSE,ylab="Max Annual Temp(C), Melbourne",xlab="Year",main="Forecasting Using Damped Holt's Linear Trend",fcol="white",type="o")
+lines(fitted(holt_mult_damped),col="blue",type="o")
+lines(holt_mult_damped$mean,col="purple",type="o")
+legend("topleft", lty=1, col=c(1,"blue","purple"), c("data","multiplicative damped", "multiplicative damped forecast"),pch=1)
+holt_aicc <- holt_mult_damped$model$aicc
+
+if (holt_aicc < ses_aicc) {
+best_method <- "Damped Holt Linear Trend"
+best_score <- holt_aicc
+lesser_method <- "Simple Exponential Smoothing"
+lesser_score <- ses_aicc
+} else {
+best_method <- "Simple Exponential Smoothing"
+best_score <- ses_aicc
+lesser_method <- "Damped Holt Linear Trend"
+lesser_score <- holt_aicc
+}
+options(digits = 1)
+```
+
+###### The `r best_method` model was a better predictor than the `r lesser_method` model, with an AICc score of `r best_score` versus `r lesser_score`.
+
+#### Wand Sales (Gregorovitch vs. Ollivander)
+
+```{r WANDS, echo=TRUE}
+# Question 3
+# Read in wand buying data from Gregorovitch and convert to time series
+gregorovitch <- read.csv("Unit11TimeSeries_Gregorovitch.csv", na.strings = "", strip.white = TRUE)
+names(gregorovitch) <- c("Date","Gregorovitch")
+greg_ts <- xts(gregorovitch[,-1], order.by=as.Date(gregorovitch[,1], "%m/%d/%Y"))
+
+# Read in wand buying data from Ollivander and convert to time series
+ollivander <- read.csv("Unit11TimeSeries_Ollivander.csv", na.strings = "", strip.white = TRUE)
+names(ollivander) <- c("Date","Ollivander")
+ollie_ts <- xts(ollivander[,-1], order.by=as.Date(ollivander[,1], "%m/%d/%Y"))
+
+wands_sold <- cbind(greg_ts, ollie_ts)
+names(wands_sold) <- c("Gregorovitch","Ollivander")
+dygraph(wands_sold, main = "Wand Sales", xlab = "Years", ylab = "Number of Wands Sold") %>% dySeries("Gregorovitch", label="Gregorovitch", color="red") %>% dySeries("Ollivander", label="Ollivander", color="blue")  %>% dyLegend(show = "always", hideOnMouseOut = FALSE) %>% dyOptions(stackedGraph = TRUE) %>% dyShading(from="1995-1-1", to="1999-12-31", color="#CCEBD6") %>% dyRangeSelector() %>% dyHighlight(highlightSeriesOpts = list(strokeWidth=3))
+```
